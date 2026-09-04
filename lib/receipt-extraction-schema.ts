@@ -13,29 +13,31 @@ export const RECEIPT_EXTRACTION_JSON_SCHEMA = {
     items: {
       type: "array",
       description:
-        "Line items only; exclude subtotal, tax, service charge, tips, totals.",
+        "Every purchasable line item on the receipt. Exclude subtotal, tax, service charge, tips, discounts-only, and grand total rows.",
       items: {
         type: "object",
         properties: {
           name: {
             type: "string",
             description:
-              "Item name as printed. Preserve Thai, English, mixed, slashes, parentheses.",
+              "Item name exactly as printed. Keep Thai, English, mixed script, numbers, slashes, and parentheses.",
           },
           qty: {
             type: "integer",
-            description: "Quantity for this line (minimum 1).",
+            description:
+              "Quantity for this line (minimum 1). If qty is not printed, use 1.",
             minimum: 1,
           },
           price: {
             type: "number",
             description:
-              "Line total amount for this row (not unit price unless line shows one unit).",
+              "LINE TOTAL for this row in the receipt currency (the amount charged for that line). Not unit price unless qty is 1.",
           },
           notes: {
             type: "array",
             items: { type: "string" },
-            description: "Modifiers or sub-lines, e.g. no ice; empty array if none.",
+            description:
+              "Modifiers or indented sub-lines under this item (e.g. ไม่เอาน้ำแข็ง). Empty array if none.",
           },
         },
         required: ["name", "qty", "price", "notes"],
@@ -70,14 +72,33 @@ export const RECEIPT_EXTRACTION_JSON_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-export const RECEIPT_VISION_INSTRUCTIONS = `You are a receipt digitization assistant. Read the receipt image carefully.
-Support Thai-only, English-only, and mixed Thai/English text.
+export const RECEIPT_VISION_INSTRUCTIONS = `You extract structured data from a restaurant / cafe / shop receipt photo.
+This is vision reading (not a separate OCR engine). Read every visible line carefully.
 
-Rules:
-- Extract ONLY purchasable line items. Do NOT put subtotal, service charge, VAT, discount-only lines, or grand total into items[].
-- For each item: name as printed; qty is the quantity for that line (at least 1); price is the LINE TOTAL for that row (the amount charged for that line on the receipt).
-- If the receipt shows unit price × quantity, compute or take the line total as price.
-- notes[]: short modifiers (e.g. "no ice", "large size") tied to that line; use [] if none.
-- merchant_name: store or restaurant name, or "" if missing.
-- subtotal, service_charge, vat, total: numeric values from the receipt; use 0 if not shown or unreadable.
-- Output must follow the JSON schema exactly. Be conservative: if unsure about a line, omit it from items rather than guessing.`;
+Language: Thai-only, English-only, and mixed Thai/English are all common. Preserve Thai characters exactly.
+
+What to extract into items[]:
+- Include every purchasable food/drink/product line with a price.
+- Include combo / set lines and add-on lines that have their own price.
+- Put free modifiers under the parent item's notes[] (not as separate $0 noise items unless they have a price).
+
+What to EXCLUDE from items[]:
+- Headers, table numbers, order numbers, timestamps, cashier names
+- Subtotal / ส่วนลด / service charge / VAT / tax / tip / grand total / change / payment method
+- "Thank you" / promotional footer lines
+
+Prices & qty:
+- price = LINE TOTAL for that row (what the guest pays for that line).
+- If the receipt shows unit price × qty, set qty correctly and price = line total.
+- Strip currency symbols (฿, THB, Baht). Use numbers only.
+- Thai receipts often use commas as thousands separators (e.g. 1,250.00).
+
+Completeness:
+- Prefer extracting a line when it clearly has a name and an amount.
+- Do not invent items that are not on the receipt.
+- Scan top-to-bottom; do not stop after the first few items.
+
+merchant_name: shop/restaurant name near the top, or "" if unreadable.
+subtotal, service_charge, vat, total: numbers from the footer if present, else 0.
+
+Return JSON that matches the schema exactly.`;

@@ -103,11 +103,12 @@ function NewBillInner() {
       setLocalErr(null);
       setUploadBusy(true);
       try {
-        // HEIC / huge phone photos → JPEG before Storage + OCR (fewer flaky failures).
+        // HEIC / huge phone photos → JPEG before Storage + OpenAI vision.
         const ready = await normalizeReceiptImage(file);
         const url = await uploadBillReceiptImage(billId, ready);
         await setBillImageUrl(billId, url);
         try {
+          // OpenAI Responses API only — no local OCR / mock OCR.
           const extracted = await extractReceiptViaOpenAI(ready, user);
           if (extracted.items.length > 0) {
             await replaceItemsFromParsed(billId, extracted.items);

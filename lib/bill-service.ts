@@ -98,7 +98,9 @@ export async function uploadOwnerPaymentQr(
   await user.getIdToken(true);
 
   const storage = getFirebaseStorage();
-  const sref = ref(storage, `users/${uid}/payment-qr.jpg`);
+  // Use bills/... path so existing Storage rules (auth write under bills/*) work
+  // even before users/* rules are deployed.
+  const sref = ref(storage, `bills/owner-settings/${uid}/payment-qr.jpg`);
   const contentType =
     file.type && file.type.startsWith("image/") ? file.type : "image/jpeg";
 
@@ -111,26 +113,50 @@ export async function uploadOwnerPaymentQr(
       }
       await uploadBytes(sref, file, {
         contentType,
-        customMetadata: { uploadedBy: uid },
+        customMetadata: { uploadedBy: uid, kind: "payment-qr" },
       });
       const url = await getDownloadURL(sref);
       await updateOwnerSettings(uid, { paymentQrUrl: url });
       return url;
     } catch (err) {
       lastErr = err;
+      if (!isRetryableStorageError(err) && attempt === 0) {
+        // Still retry once on permission errors after token refresh.
+        const code =
+          err && typeof err === "object" && "code" in err
+            ? String((err as { code?: string }).code)
+            : "";
+        if (!code.includes("unauthorized") && !code.includes("permission")) {
+          break;
+        }
+      }
     }
   }
   const raw =
     lastErr instanceof Error ? lastErr.message : "Could not upload payment QR.";
+  const code =
+    lastErr && typeof lastErr === "object" && "code" in lastErr
+      ? String((lastErr as { code?: string }).code)
+      : "";
+  if (code.includes("unauthorized") || raw.toLowerCase().includes("permission")) {
+    throw new Error(
+      "Could not save QR (storage permission). Sign out, sign in again, then retry.",
+    );
+  }
   throw new Error(toUserFacingFirebaseError(raw));
 }
 
 export async function clearOwnerPaymentQr(uid: string) {
-  try {
-    const sref = ref(getFirebaseStorage(), `users/${uid}/payment-qr.jpg`);
-    await deleteObject(sref);
-  } catch {
-    /* best-effort */
+  const paths = [
+    `bills/owner-settings/${uid}/payment-qr.jpg`,
+    `users/${uid}/payment-qr.jpg`,
+  ];
+  for (const path of paths) {
+    try {
+      await deleteObject(ref(getFirebaseStorage(), path));
+    } catch {
+      /* best-effort */
+    }
   }
   await updateOwnerSettings(uid, { paymentQrUrl: null });
 }

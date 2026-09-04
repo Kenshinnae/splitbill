@@ -17,7 +17,7 @@ import {
   notificationPermission,
   requestNotificationPermission,
 } from "@/lib/notify";
-import { normalizeReceiptImage } from "@/lib/receipt-image";
+import { normalizePaymentQrImage } from "@/lib/receipt-image";
 import type { UserProfile } from "@/types";
 
 function SettingsInner() {
@@ -83,7 +83,7 @@ function SettingsInner() {
     setErr(null);
     setMsg(null);
     try {
-      const ready = await normalizeReceiptImage(file);
+      const ready = await normalizePaymentQrImage(file);
       await uploadOwnerPaymentQr(user.uid, ready);
       setMsg("Payment QR updated. It will show on finalized bills.");
       await reload();

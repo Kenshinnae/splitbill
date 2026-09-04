@@ -64,14 +64,21 @@ function extractAssistantJsonText(data: unknown): string | null {
     return r.output_text.trim();
   }
   if (!Array.isArray(r.output)) return null;
+  const chunks: string[] = [];
   for (const item of r.output) {
-    if (item.type !== "message" || !Array.isArray(item.content)) continue;
-    for (const c of item.content) {
-      if (c.type === "output_text" && typeof c.text === "string" && c.text.trim()) {
-        return c.text.trim();
+    if (item.type === "message" && Array.isArray(item.content)) {
+      for (const c of item.content) {
+        if (
+          (c.type === "output_text" || c.type === "text") &&
+          typeof c.text === "string" &&
+          c.text.trim()
+        ) {
+          chunks.push(c.text.trim());
+        }
       }
     }
   }
+  if (chunks.length) return chunks.join("\n");
   return null;
 }
 
@@ -145,17 +152,22 @@ export async function POST(request: Request) {
   const base64 = buf.toString("base64");
   const dataUrl = `data:${mime};base64,${base64}`;
 
-  // gpt-5.4 is stronger on dense receipt / Thai OCR than gpt-4o.
-  const model = process.env.OPENAI_RECEIPT_MODEL?.trim() || "gpt-5.4";
-  // Prefer original pixels for small print; fall back to high if env forces it.
+  // OpenAI vision only (Responses API) — no local/mock OCR on this path.
+  const model = process.env.OPENAI_RECEIPT_MODEL?.trim() || "gpt-5.6-sol";
+  // Prefer original pixels for small Thai print on receipts.
   const detailRaw = process.env.OPENAI_RECEIPT_IMAGE_DETAIL?.trim() || "original";
   const detail =
-    detailRaw === "low" || detailRaw === "high" || detailRaw === "auto"
+    detailRaw === "low" ||
+    detailRaw === "high" ||
+    detailRaw === "auto" ||
+    detailRaw === "original"
       ? detailRaw
       : "original";
 
   const body = {
     model,
+    // Light reasoning helps dense Thai receipts without huge latency.
+    reasoning: { effort: "low" as const },
     input: [
       {
         role: "user" as const,
