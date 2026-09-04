@@ -4,13 +4,13 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "SplitBill",
     short_name: "SplitBill",
-    description: "Split restaurant bills with friends in real time.",
+    description: "Split bills, track shares, and settle up with friends.",
     start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#fafaf9",
-    theme_color: "#059669",
+    background_color: "#0f172a",
+    theme_color: "#d97706",
     lang: "en",
     categories: ["finance", "utilities"],
     icons: [

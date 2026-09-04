@@ -191,6 +191,12 @@ export default function BillRoomPage() {
 
   async function onFinalize() {
     if (!isOwner) return;
+    if (!allDone) {
+      setLocalErr(
+        `Wait until everyone is done (${doneCount}/${participants.length}).`,
+      );
+      return;
+    }
     setFinalizeBusy(true);
     setLocalErr(null);
     try {
@@ -467,12 +473,21 @@ export default function BillRoomPage() {
           </ul>
           <button
             type="button"
-            disabled={finalizeBusy}
+            disabled={finalizeBusy || !allDone || participants.length === 0}
             onClick={onFinalize}
-            className="mt-4 w-full rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="mt-4 w-full rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            {finalizeBusy ? "Finalizing…" : "Finalize bill"}
+            {finalizeBusy
+              ? "Finalizing…"
+              : allDone
+                ? "Finalize bill"
+                : `Finalize locked · ${doneCount}/${participants.length} done`}
           </button>
+          {!allDone && participants.length > 0 ? (
+            <p className="mt-2 text-center text-[11px] text-zinc-500">
+              Everyone must tap “I’m done” before you can finalize.
+            </p>
+          ) : null}
         </div>
       ) : (
         <div className="mb-4 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -518,16 +533,55 @@ export default function BillRoomPage() {
                     participants,
                   )
                 : 0;
+            const iSelected =
+              Boolean(joinedId) && isSharedSelected(row.item.id, joinedId!);
+            const iPayAll =
+              Boolean(joinedId) &&
+              Boolean(selectionFor(row.item.id, joinedId!)?.selected);
+            const canTapSelect =
+              Boolean(joinedId && me && bill.status === "active") &&
+              (mode === "shared" || mode === "single");
 
             return (
-              <li
-                key={row.item.id}
-                className={`rounded-2xl border p-4 shadow-sm ${
-                  row.assignment === "unassigned"
-                    ? "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
-                    : "border-zinc-200/90 bg-white dark:border-zinc-800 dark:bg-zinc-900"
-                }`}
-              >
+              <li key={row.item.id}>
+                <div
+                  role={canTapSelect ? "button" : undefined}
+                  tabIndex={canTapSelect ? 0 : undefined}
+                  onClick={
+                    canTapSelect
+                      ? () => {
+                          if (mode === "shared" && joinedId) {
+                            void toggleSharedSelection(
+                              row.item.id,
+                              !iSelected,
+                            );
+                          } else if (mode === "single") {
+                            void toggleSingleAssignee(row.item.id);
+                          }
+                        }
+                      : undefined
+                  }
+                  onKeyDown={
+                    canTapSelect
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            (e.currentTarget as HTMLElement).click();
+                          }
+                        }
+                      : undefined
+                  }
+                  className={`rounded-2xl border p-4 shadow-sm transition ${
+                    canTapSelect ? "cursor-pointer active:scale-[0.99]" : ""
+                  } ${
+                    (mode === "shared" && iSelected) ||
+                    (mode === "single" && iPayAll)
+                      ? "border-emerald-400 bg-emerald-50/80 ring-1 ring-emerald-300 dark:border-emerald-700 dark:bg-emerald-950/40 dark:ring-emerald-800"
+                      : row.assignment === "unassigned"
+                        ? "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
+                        : "border-zinc-200/90 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                  }`}
+                >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
@@ -536,6 +590,7 @@ export default function BillRoomPage() {
                         : mode === "quantity"
                           ? "By units"
                           : "Single payer"}
+                      {canTapSelect ? " · tap to select" : ""}
                     </p>
                     <p className="font-medium text-zinc-900 dark:text-zinc-50">
                       {row.item.name}
@@ -593,21 +648,21 @@ export default function BillRoomPage() {
                   </div>
                   {joinedId && me && bill.status === "active" ? (
                     mode === "shared" ? (
-                      <label className="flex shrink-0 cursor-pointer items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isSharedSelected(row.item.id, joinedId)}
-                          onChange={(e) =>
-                            toggleSharedSelection(
-                              row.item.id,
-                              e.target.checked,
-                            )
-                          }
-                          className="h-5 w-5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
-                        />
-                      </label>
+                      <span
+                        aria-hidden
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                          iSelected
+                            ? "bg-emerald-600 text-white"
+                            : "border border-zinc-300 text-zinc-400 dark:border-zinc-600"
+                        }`}
+                      >
+                        {iSelected ? "✓" : ""}
+                      </span>
                     ) : mode === "quantity" ? (
-                      <label className="flex shrink-0 flex-col gap-0.5 text-[10px] font-medium text-zinc-500">
+                      <label
+                        className="flex shrink-0 flex-col gap-0.5 text-[10px] font-medium text-zinc-500"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         Units
                         <input
                           type="number"
@@ -622,19 +677,16 @@ export default function BillRoomPage() {
                         />
                       </label>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => toggleSingleAssignee(row.item.id)}
+                      <span
+                        aria-hidden
                         className={`shrink-0 rounded-xl px-3 py-2 text-xs font-semibold ${
-                          selectionFor(row.item.id, joinedId)?.selected
+                          iPayAll
                             ? "bg-emerald-600 text-white"
                             : "border border-zinc-300 text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
                         }`}
                       >
-                        {selectionFor(row.item.id, joinedId)?.selected
-                          ? "You pay all"
-                          : "I pay all"}
-                      </button>
+                        {iPayAll ? "You pay all" : "I pay all"}
+                      </span>
                     )
                   ) : null}
                 </div>
@@ -668,6 +720,7 @@ export default function BillRoomPage() {
                     })}
                   </div>
                 ) : null}
+                </div>
               </li>
             );
           })}
