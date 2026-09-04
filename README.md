@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SplitBill — real-time collaborative bill splitting
 
-## Getting Started
+Mobile-first web app: an authenticated **owner** creates a bill, uploads a receipt (mock OCR for line items), adds participants, and shares a link. **Guests** join without an account, pick their name, select items in real time, and mark themselves done. The owner finalizes to lock the bill and show per-person totals.
 
-First, run the development server:
+## Stack
+
+- Next.js (App Router), TypeScript, Tailwind CSS  
+- Firebase Authentication (email/password for owners)  
+- Cloud Firestore (live listeners)  
+- Firebase Storage (receipt images)
+
+## Quick start
 
 ```bash
+npm install
+cp .env.example .env.local
+# Edit .env.local with your Firebase web app keys (Project settings → Your apps).
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). You will be redirected to `/login` until an owner account exists.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Required in `.env.local` (all `NEXT_PUBLIC_*` are exposed to the browser):
 
-## Learn More
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Web API key |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | e.g. `your-project.firebaseapp.com` |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Project ID |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage bucket name |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Sender ID |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | App ID |
 
-To learn more about Next.js, take a look at the following resources:
+## Firebase Console checklist
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Create a project** (or use an existing one) and register a **Web** app to obtain the config values above.  
+2. **Authentication**  
+   - Enable **Email/Password**.  
+   - Do **not** expose a public sign-up screen in this product; add users manually (see below) or run the seed script while sign-up is still allowed.  
+3. **Firestore**  
+   - Create database (production or test mode for first try).  
+   - Deploy rules from `firebase/firestore.rules` (Console → Firestore → Rules), or use the Firebase CLI.  
+   - Create the composite index from `firebase/firestore.indexes.json` when prompted by the app error link, or deploy indexes with CLI.  
+4. **Storage**  
+   - Enable Storage.  
+   - Apply rules from `firebase/storage.rules`.  
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Create the owner login manually
 
-## Deploy on Vercel
+**Recommended (works even when client sign-up is disabled):**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Firebase Console → **Authentication** → **Users** → **Add user**.  
+2. Enter email and password.  
+3. Sign in at `/login` in the app.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Optional script** (only if the Identity Toolkit **signUp** API is allowed for your key / project settings):
+
+```bash
+NEXT_PUBLIC_FIREBASE_API_KEY=your_key npm run seed-owner -- owner@example.com 'secure-password'
+```
+
+If this fails with `OPERATION_NOT_ALLOWED` or sign-up disabled, use the Console method above.
+
+## Security rules
+
+- **Firestore:** `firebase/firestore.rules` — owners own their bills; guests with a link can read **active/completed** bills and write participants/selections while **active** (MVP trust model). Comments note where to tighten (App Check, field validation, custom claims).  
+- **Storage:** `firebase/storage.rules` — authenticated uploads under `bills/{billId}/…`; reads are public in MVP (change for production).
+
+## Project layout
+
+| Path | Purpose |
+|------|---------|
+| `app/` | Routes: `/`, `/login`, `/dashboard`, `/bills/new`, `/bill/[billId]`, `/bill/[billId]/summary` |
+| `components/` | Shared UI (`AppShell`, `OwnerGuard`, `LoadingScreen`, …) |
+| `hooks/` | `useAuth`, `useRealtimeBill`, `useOwnerBills` |
+| `lib/` | Firebase init, Firestore helpers, mock OCR, totals math |
+| `types/` | Shared TypeScript models |
+| `firebase/` | Rules and index definitions |
+| `scripts/seed-owner.mjs` | Optional REST helper to create a user |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run start` | Run production server |
+| `npm run lint` | ESLint |
+| `npm run seed-owner` | Optional owner user creation via API |
+
+## Product notes
+
+- OCR is **mocked** (`lib/mock-ocr.ts`); replace with a real service when ready.  
+- Totals are **computed on the client** from items + selections (equal split per item among everyone who selected it). Items with no selectors are labeled **unassigned** and excluded from totals.  
+- **Owner routes** (`/dashboard`, `/bills/new`) are guarded on the client with `OwnerGuard`; guests use `/bill/[id]` only.

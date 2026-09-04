@@ -36,6 +36,14 @@ yarn-error.log*
 # vercel
 .vercel
 
+# generated for Hostinger zip (source of truth: .env.hostinger)
+public/firebase-config.json
+
+# deploy artifacts / junk
+*.zip
+bill-calculation@*
+/next
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

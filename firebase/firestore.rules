@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function billPath(bid) {
+      return /databases/$(database)/documents/bills/$(bid);
+    }
+
+    function billData(bid) {
+      return get(billPath(bid)).data;
+    }
+
+    // Use resource.data on the bill doc so owner list queries work.
+    function canReadBillDoc() {
+      return resource != null && (
+        (request.auth != null && request.auth.uid == resource.data.ownerId)
+        || resource.data.status in ['active', 'completed', 'closed', 'draft']
+      );
+    }
+
+    function canReadBill(bid) {
+      let b = billData(bid);
+      return (request.auth != null && request.auth.uid == b.ownerId)
+        || b.status in ['active', 'completed', 'closed', 'draft'];
+    }
+
+    function isBillOwner(bid) {
+      return request.auth != null && request.auth.uid == billData(bid).ownerId;
+    }
+
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /bills/{billId} {
+
+      allow read: if canReadBillDoc();
+
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow update, delete: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+
+      match /items/{itemId} {
+        allow read: if canReadBill(billId);
+        allow write: if isBillOwner(billId);
+      }
+
+      match /participants/{participantId} {
+        allow read: if canReadBill(billId);
+        allow create: if isBillOwner(billId)
+          || billData(billId).status == 'active';
+        allow update: if isBillOwner(billId)
+          || billData(billId).status == 'active';
+        allow delete: if isBillOwner(billId);
+      }
+
+      match /selections/{selectionId} {
+        allow read: if canReadBill(billId);
+        allow create, update: if billData(billId).status == 'active';
+        allow delete: if isBillOwner(billId);
+      }
+
+      match /activity/{docId} {
+        allow read: if canReadBill(billId);
+        allow write: if isBillOwner(billId);
+      }
+    }
+  }
+}

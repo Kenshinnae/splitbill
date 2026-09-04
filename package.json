@@ -2,25 +2,38 @@
   "name": "bill-calculation",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "seed-owner": "node scripts/seed-owner.mjs",
+    "deploy:firebase-rules": "firebase deploy --only firestore:rules,storage",
+    "ngrok": "node scripts/ngrok-dev.mjs",
+    "zip:hostinger": "node scripts/zip-hostinger.mjs"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4",
+    "firebase": "^12.11.0",
     "next": "16.2.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@ngrok/ngrok": "^1.7.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "firebase-tools": "^14.27.0",
+    "vitest": "^4.1.4"
   }
 }
