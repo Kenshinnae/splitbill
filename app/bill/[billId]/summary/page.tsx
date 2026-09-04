@@ -128,6 +128,34 @@ export default function BillSummaryPage() {
         </div>
       </div>
 
+      {bill.ownerPaymentQrUrl ? (
+        <section className="mt-8 rounded-2xl border border-zinc-200/90 bg-white p-4 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            Pay the host
+          </h2>
+          <p className="mt-1 text-xs text-zinc-500">
+            Scan this QR to transfer your share.
+          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={bill.ownerPaymentQrUrl}
+            alt="Host payment QR"
+            className="mx-auto mt-4 max-h-64 w-auto rounded-xl border border-zinc-200 bg-white object-contain p-2 dark:border-zinc-700"
+          />
+        </section>
+      ) : isOwner ? (
+        <p className="mt-6 text-center text-xs text-zinc-500">
+          Tip: add your payment QR in{" "}
+          <Link
+            href="/settings"
+            className="font-medium text-emerald-600 underline dark:text-emerald-400"
+          >
+            Settings
+          </Link>{" "}
+          so guests can pay you on the next finalized bill.
+        </p>
+      ) : null}
+
       <p className="mt-8 text-center text-xs text-zinc-400">
         SplitBill · amounts split evenly per item among who selected it
       </p>

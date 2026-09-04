@@ -26,6 +26,7 @@ import type {
   ItemSplitMode,
   ParsedLineItem,
   Participant,
+  UserProfile,
 } from "@/types";
 import { getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import { toUserFacingFirebaseError } from "@/lib/firebase-client-errors";
@@ -62,6 +63,76 @@ export async function ensureUserProfile(uid: string, email: string) {
     },
     { merge: true },
   );
+}
+
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  const snap = await getDoc(doc(getFirebaseDb(), "users", uid));
+  if (!snap.exists()) return null;
+  return snap.data() as UserProfile;
+}
+
+export async function updateOwnerSettings(
+  uid: string,
+  patch: {
+    displayName?: string;
+    notifyEnabled?: boolean;
+    paymentQrUrl?: string | null;
+  },
+) {
+  await setDoc(
+    doc(getFirebaseDb(), "users", uid),
+    { ...patch, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+}
+
+export async function uploadOwnerPaymentQr(
+  uid: string,
+  file: File,
+): Promise<string> {
+  const auth = getFirebaseAuth();
+  const user = auth.currentUser;
+  if (!user || user.uid !== uid) {
+    throw new Error("Sign in again to upload your payment QR.");
+  }
+  await user.getIdToken(true);
+
+  const storage = getFirebaseStorage();
+  const sref = ref(storage, `users/${uid}/payment-qr.jpg`);
+  const contentType =
+    file.type && file.type.startsWith("image/") ? file.type : "image/jpeg";
+
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0) {
+        await user.getIdToken(true);
+        await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
+      await uploadBytes(sref, file, {
+        contentType,
+        customMetadata: { uploadedBy: uid },
+      });
+      const url = await getDownloadURL(sref);
+      await updateOwnerSettings(uid, { paymentQrUrl: url });
+      return url;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  const raw =
+    lastErr instanceof Error ? lastErr.message : "Could not upload payment QR.";
+  throw new Error(toUserFacingFirebaseError(raw));
+}
+
+export async function clearOwnerPaymentQr(uid: string) {
+  try {
+    const sref = ref(getFirebaseStorage(), `users/${uid}/payment-qr.jpg`);
+    await deleteObject(sref);
+  } catch {
+    /* best-effort */
+  }
+  await updateOwnerSettings(uid, { paymentQrUrl: null });
 }
 
 export async function createDraftBill(ownerId: string, title: string) {
@@ -367,10 +438,29 @@ export async function startSharing(billId: string) {
 }
 
 export async function finalizeBill(billId: string) {
+  const billSnap = await getDoc(billDocRef(billId));
+  if (!billSnap.exists()) {
+    throw new Error("Bill not found.");
+  }
+  const data = billSnap.data();
+  const ownerId = typeof data.ownerId === "string" ? data.ownerId : "";
+  let ownerPaymentQrUrl: string | null =
+    typeof data.ownerPaymentQrUrl === "string" ? data.ownerPaymentQrUrl : null;
+  if (ownerId) {
+    try {
+      const profile = await getUserProfile(ownerId);
+      if (profile?.paymentQrUrl) {
+        ownerPaymentQrUrl = profile.paymentQrUrl;
+      }
+    } catch {
+      /* keep existing bill QR if profile read fails */
+    }
+  }
   await updateDoc(billDocRef(billId), {
     status: "completed",
     finalizedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    ownerPaymentQrUrl,
   });
 }
 

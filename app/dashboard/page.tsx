@@ -50,13 +50,21 @@ function DashboardContent() {
     <AppShell
       title="Your bills"
       action={
-        <button
-          type="button"
-          onClick={() => logout()}
-          className="rounded-lg px-2 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/settings"
+            className="rounded-lg px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+          >
+            Settings
+          </Link>
+          <button
+            type="button"
+            onClick={() => logout()}
+            className="rounded-lg px-2 py-1 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Sign out
+          </button>
+        </div>
       }
     >
       {user?.email ? (

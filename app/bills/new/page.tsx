@@ -92,6 +92,11 @@ function NewBillInner() {
     return `${window.location.origin}/bill/${billId}`;
   }, [billId]);
 
+  const itemsSubtotal = useMemo(
+    () => items.reduce((s, i) => s + i.price, 0),
+    [items],
+  );
+
   const onUpload = useCallback(
     async (file: File | null) => {
       if (!file || !billId || !user) return;
@@ -451,6 +456,23 @@ function NewBillInner() {
           </form>
         </section>
 
+        <section className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-4 dark:border-emerald-900 dark:bg-emerald-950/40">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+                Bill total
+              </p>
+              <p className="mt-0.5 text-xs text-emerald-800/80 dark:text-emerald-200/80">
+                {items.length} item{items.length === 1 ? "" : "s"} · sum of line
+                prices
+              </p>
+            </div>
+            <p className="text-2xl font-bold tabular-nums text-emerald-950 dark:text-emerald-50">
+              {formatMoney(itemsSubtotal)}
+            </p>
+          </div>
+        </section>
+
         <section className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
             Participants
@@ -499,6 +521,12 @@ function NewBillInner() {
         ) : null}
 
         <div className="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t border-zinc-200 bg-[var(--background)]/95 px-4 py-4 backdrop-blur dark:border-zinc-800">
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-zinc-900 px-3 py-2.5 text-white dark:bg-zinc-100 dark:text-zinc-900">
+            <span className="text-sm font-medium opacity-90">Total</span>
+            <span className="text-lg font-bold tabular-nums">
+              {formatMoney(itemsSubtotal)}
+            </span>
+          </div>
           <p className="text-center text-xs text-zinc-500">
             Share link (after you start):{" "}
             <span className="break-all font-mono text-zinc-700 dark:text-zinc-300">
@@ -526,8 +554,7 @@ function NewBillInner() {
             </button>
           </div>
           <p className="text-center text-[11px] text-zinc-400">
-            Requires at least one item and one participant. Totals:{" "}
-            {formatMoney(items.reduce((s, i) => s + i.price, 0))} subtotal
+            Requires at least one item and one participant.
           </p>
         </div>
 

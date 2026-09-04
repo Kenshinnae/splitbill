@@ -10,6 +10,8 @@ export interface Bill {
   ownerId: string;
   title: string;
   imageUrl: string | null;
+  /** Copied from owner profile at finalize time for guest-visible pay QR. */
+  ownerPaymentQrUrl?: string | null;
   status: BillStatus;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
@@ -56,6 +58,9 @@ export interface UserProfile {
   uid: string;
   email: string;
   role: "owner";
+  paymentQrUrl?: string | null;
+  displayName?: string;
+  notifyEnabled?: boolean;
 }
 
 export interface ParsedLineItem {

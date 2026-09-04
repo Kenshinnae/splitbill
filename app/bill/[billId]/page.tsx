@@ -24,6 +24,14 @@ import {
   getParticipantShareForItem,
 } from "@/lib/calculations";
 import { formatMoney } from "@/lib/currency";
+import {
+  clearAllDoneNotified,
+  markAllDoneNotified,
+  notificationPermission,
+  requestNotificationPermission,
+  showLocalNotification,
+  wasAllDoneNotified,
+} from "@/lib/notify";
 
 function storageKey(billId: string) {
   return `splitbill_participant_${billId}`;
@@ -74,10 +82,26 @@ export default function BillRoomPage() {
   );
 
   const doneCount = participants.filter((p) => p.isDone).length;
+  const allDone =
+    participants.length > 0 && doneCount === participants.length;
   const shareUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/bill/${billId}`
       : "";
+
+  useEffect(() => {
+    if (!isOwner || bill?.status !== "active") return;
+    if (!allDone) {
+      clearAllDoneNotified(billId);
+      return;
+    }
+    if (wasAllDoneNotified(billId)) return;
+    markAllDoneNotified(billId);
+    showLocalNotification("Everyone is done", {
+      body: `${bill?.title || "This bill"} is ready to finalize.`,
+      tag: `bill-all-done-${billId}`,
+    });
+  }, [isOwner, bill?.status, bill?.title, allDone, billId]);
 
   async function joinAs(id: string) {
     setJoinedId(id);
@@ -391,6 +415,27 @@ export default function BillRoomPage() {
 
       {isOwner && bill.status === "active" ? (
         <div className="mb-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          {allDone ? (
+            <div className="mb-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-3 dark:border-emerald-800 dark:bg-emerald-950/50">
+              <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                Everyone is done — ready to finalize
+              </p>
+              <p className="mt-1 text-xs text-emerald-800/90 dark:text-emerald-200/90">
+                All {participants.length} people marked done. Review totals,
+                then finalize.
+              </p>
+              {notificationPermission() !== "granted" &&
+              notificationPermission() !== "unsupported" ? (
+                <button
+                  type="button"
+                  className="mt-2 text-xs font-medium text-emerald-700 underline dark:text-emerald-300"
+                  onClick={() => void requestNotificationPermission()}
+                >
+                  Enable notifications next time
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
               Progress
