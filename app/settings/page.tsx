@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/LanguageProvider";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { OwnerGuard } from "@/components/OwnerGuard";
@@ -21,6 +23,7 @@ import { normalizePaymentQrImage } from "@/lib/receipt-image";
 import type { UserProfile } from "@/types";
 
 function SettingsInner() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,7 +103,7 @@ function SettingsInner() {
 
   async function onClearQr() {
     if (!user) return;
-    if (!window.confirm("Remove your payment QR?")) return;
+    if (!window.confirm(t("Remove your payment QR?"))) return;
     setBusy(true);
     setErr(null);
     setMsg(null);
@@ -146,7 +149,7 @@ function SettingsInner() {
 
   if (loading) {
     return (
-      <AppShell title="Settings">
+      <AppShell title={t("Settings")}>
         <LoadingScreen />
       </AppShell>
     );
@@ -154,28 +157,25 @@ function SettingsInner() {
 
   return (
     <AppShell
-      title="Settings"
+      title={t("Settings")}
       action={
         <Link
           href="/dashboard"
           className="text-xs font-medium text-emerald-600 dark:text-emerald-400"
         >
-          Bills
-        </Link>
+          {t("Bills")}</Link>
       }
     >
       <div className="flex flex-col gap-6">
         <section className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Display name
-          </h2>
+            {t("Display name")}</h2>
           <p className="mt-1 text-xs text-zinc-500">
-            Optional label for yourself (not shown to guests yet).
-          </p>
+            {t("Optional label for yourself (not shown to guests yet).")}</p>
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder={user?.email ?? "Your name"}
+            placeholder={user?.email ?? t("Your name")}
             className="mt-3 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
           <button
@@ -184,31 +184,27 @@ function SettingsInner() {
             onClick={() => void saveName()}
             className="mt-3 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            Save name
-          </button>
+            {t("Save name")}</button>
         </section>
 
         <section className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Payment QR
-          </h2>
+            {t("Payment QR")}</h2>
           <p className="mt-1 text-xs text-zinc-500">
-            Upload your bank / PromptPay QR. When you finalize a bill, guests
-            will see it on the summary so they can pay you.
-          </p>
+            {t("Upload your bank / PromptPay QR. When you finalize a bill, guests will see it on the summary so they can pay you.")}</p>
           {profile?.paymentQrUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={profile.paymentQrUrl}
-              alt="Your payment QR"
+              alt={t("Your payment QR")}
               className="mx-auto mt-4 max-h-56 w-auto rounded-xl border border-zinc-200 bg-white object-contain p-2 dark:border-zinc-700"
             />
           ) : (
-            <p className="mt-3 text-sm text-zinc-500">No QR uploaded yet.</p>
+            <p className="mt-3 text-sm text-zinc-500">{t("No QR uploaded yet.")}</p>
           )}
           <label className="mt-3 flex cursor-pointer flex-col items-center rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-5 text-sm dark:border-zinc-600 dark:bg-zinc-950">
             <span className="font-medium text-emerald-700 dark:text-emerald-400">
-              {busy ? "Working…" : "Upload QR image"}
+              {busy ? t("Working…") : t("Upload QR image")}
             </span>
             <input
               type="file"
@@ -216,7 +212,11 @@ function SettingsInner() {
               className="hidden"
               disabled={busy}
               onChange={(e) =>
-                void onQrUpload(e.target.files?.[0] ?? null)
+                {
+                  const file = e.currentTarget.files?.[0] ?? null;
+                  e.currentTarget.value = "";
+                  void onQrUpload(file);
+                }
               }
             />
           </label>
@@ -227,30 +227,25 @@ function SettingsInner() {
               onClick={() => void onClearQr()}
               className="mt-2 w-full rounded-xl border border-red-200 py-2 text-sm font-medium text-red-700 disabled:opacity-50 dark:border-red-900 dark:text-red-300"
             >
-              Remove QR
-            </button>
+              {t("Remove QR")}</button>
           ) : null}
         </section>
 
         <section className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Notifications
-          </h2>
+            {t("Notifications")}</h2>
           <p className="mt-1 text-xs text-zinc-500">
-            When everyone marks done on a live bill and you have this app open
-            (or installed as PWA), you can get a local alert. Does not wake the
-            phone if the app is fully closed.
-          </p>
+            {t("When everyone marks done on a live bill and you have this app open (or installed as PWA), you can get a local alert. Does not wake the phone if the app is fully closed.")}</p>
           <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
-            Status:{" "}
+            {t("Status:")}{" "}
             <span className="font-medium">
               {perm === "granted"
-                ? "Enabled"
+                ? t("Enabled")
                 : perm === "denied"
-                  ? "Blocked"
+                  ? t("Blocked")
                   : perm === "unsupported"
-                    ? "Unsupported"
-                    : "Not enabled"}
+                    ? t("Unsupported")
+                    : t("Not enabled")}
             </span>
           </p>
           <button
@@ -259,18 +254,18 @@ function SettingsInner() {
             onClick={() => void enableNotifications()}
             className="mt-3 w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {perm === "granted" ? "Notifications on" : "Enable notifications"}
+            {perm === "granted" ? t("Notifications on") : t("Enable notifications")}
           </button>
         </section>
 
         {msg ? (
           <p className="text-center text-sm text-emerald-700 dark:text-emerald-400">
-            {msg}
+            {t(msg)}
           </p>
         ) : null}
         {err ? (
           <p className="text-center text-sm text-red-600" role="alert">
-            {err}
+            {t(err)}
           </p>
         ) : null}
       </div>

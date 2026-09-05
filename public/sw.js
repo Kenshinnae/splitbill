@@ -7,9 +7,8 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener("fetch", (event) => {
-  event.respondWith(fetch(event.request));
-});
+// Leave uploads and API requests to the browser network stack.
+// No fetch interception or offline cache is needed for this realtime app.
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

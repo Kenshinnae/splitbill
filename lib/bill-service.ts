@@ -15,7 +15,9 @@ import {
 import {
   getDownloadURL,
   ref,
-  uploadBytes,
+  uploadBytesResumable,
+  type StorageReference,
+  type UploadMetadata,
   listAll,
   deleteObject,
 } from "firebase/storage";
@@ -30,6 +32,21 @@ import type {
 } from "@/types";
 import { getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import { toUserFacingFirebaseError } from "@/lib/firebase-client-errors";
+
+/** Bound upload attempts so a suspended PWA does not remain busy indefinitely. */
+function uploadPhoto(target: StorageReference, file: File, metadata: UploadMetadata): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(target, file, metadata);
+    const timer = setTimeout(() => {
+      task.cancel();
+      reject(new Error("Photo upload timed out. Check your connection and try again."));
+    }, 30_000);
+    task.on("state_changed", undefined, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    }, () => { clearTimeout(timer); resolve(); });
+  });
+}
 
 export function billDocRef(billId: string) {
   return doc(getFirebaseDb(), "bills", billId);
@@ -111,7 +128,7 @@ export async function uploadOwnerPaymentQr(
         await user.getIdToken(true);
         await new Promise((r) => setTimeout(r, 400 * attempt));
       }
-      await uploadBytes(sref, file, {
+      await uploadPhoto(sref, file, {
         contentType,
         customMetadata: { uploadedBy: uid, kind: "payment-qr" },
       });
@@ -226,10 +243,7 @@ export async function uploadBillReceiptImage(
   await user.getIdToken(true);
 
   const storage = getFirebaseStorage();
-  const safeName = (file.name.replace(/[^\w.-]+/g, "_") || "receipt").replace(
-    /\.(heic|heif)$/i,
-    ".jpg",
-  );
+  const safeName = (file.name.replace(/[^\w.-]+/g, "_") || "receipt");
   const contentType =
     file.type && file.type.startsWith("image/") ? file.type : "image/jpeg";
   const path = `bills/${billId}/${Date.now()}_${safeName}`;
@@ -242,7 +256,7 @@ export async function uploadBillReceiptImage(
         await user.getIdToken(true);
         await sleep(400 * attempt);
       }
-      await uploadBytes(sref, file, {
+      await uploadPhoto(sref, file, {
         contentType,
         customMetadata: { billId, uploadedBy: user.uid },
       });

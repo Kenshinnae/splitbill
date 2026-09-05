@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/LanguageProvider";
+
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -38,6 +40,7 @@ function storageKey(billId: string) {
 }
 
 export default function BillRoomPage() {
+  const { t } = useI18n();
   const params = useParams();
   const billId = params.billId as string;
   const router = useRouter();
@@ -97,11 +100,11 @@ export default function BillRoomPage() {
     }
     if (wasAllDoneNotified(billId)) return;
     markAllDoneNotified(billId);
-    showLocalNotification("Everyone is done", {
-      body: `${bill?.title || "This bill"} is ready to finalize.`,
+    showLocalNotification(t("Everyone is done"), {
+      body: t("{title} is ready to finalize.", { title: bill?.title || t("This bill") }),
       tag: `bill-all-done-${billId}`,
     });
-  }, [isOwner, bill?.status, bill?.title, allDone, billId]);
+  }, [isOwner, bill?.status, bill?.title, allDone, billId, t]);
 
   async function joinAs(id: string) {
     setJoinedId(id);
@@ -193,7 +196,7 @@ export default function BillRoomPage() {
     if (!isOwner) return;
     if (!allDone) {
       setLocalErr(
-        `Wait until everyone is done (${doneCount}/${participants.length}).`,
+        t("Wait until everyone is done ({done}/{total}).", { done: doneCount, total: participants.length }),
       );
       return;
     }
@@ -221,12 +224,12 @@ export default function BillRoomPage() {
 
   if (loading && !bill) {
     return (
-      <AppShell title="Bill" showHomeLink={false}>
+      <AppShell title={t("Bill")} showHomeLink={false}>
         <div className="flex flex-col gap-3">
           <TunnelHint />
           <LoadingScreen
-            message="Connecting to room…"
-            hint="If this never finishes, open the link outside Messenger (Safari / Chrome). In-app browsers often block the connection Firestore needs."
+            message={t("Connecting to room…")}
+            hint={t("If this never finishes, open the link outside Messenger (Safari / Chrome). In-app browsers often block the connection Firestore needs.")}
           />
         </div>
       </AppShell>
@@ -235,13 +238,12 @@ export default function BillRoomPage() {
 
   if (error || !bill) {
     return (
-      <AppShell title="Bill" showHomeLink={false}>
+      <AppShell title={t("Bill")} showHomeLink={false}>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {error ?? "This bill could not be loaded."}
+          {t(error ?? "This bill could not be loaded.")}
         </p>
         <p className="mt-2 text-xs text-zinc-500">
-          If you are not the owner, the host may still be setting things up.
-        </p>
+          {t("If you are not the owner, the host may still be setting things up.")}</p>
       </AppShell>
     );
   }
@@ -249,7 +251,7 @@ export default function BillRoomPage() {
   if (bill.status === "completed" || bill.status === "closed") {
     return (
       <AppShell title={bill.title} showHomeLink={false}>
-        <LoadingScreen message="Opening summary…" />
+        <LoadingScreen message={t("Opening summary…")} />
       </AppShell>
     );
   }
@@ -259,12 +261,9 @@ export default function BillRoomPage() {
       <AppShell title={bill.title} showHomeLink={false}>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-center dark:border-amber-900 dark:bg-amber-950/40">
           <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-            Not shared yet
-          </p>
+            {t("Not shared yet")}</p>
           <p className="mt-2 text-sm text-amber-800/90 dark:text-amber-200/90">
-            The owner is still preparing this bill. Ask them to tap “Start
-            sharing,” then refresh this page.
-          </p>
+            {t("The owner is still preparing this bill. Ask them to tap “Start sharing,” then refresh this page.")}</p>
         </div>
       </AppShell>
     );
@@ -274,15 +273,12 @@ export default function BillRoomPage() {
     return (
       <AppShell title={bill.title}>
         <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-          Finish adding items and participants, then start sharing from the setup
-          screen.
-        </p>
+          {t("Finish adding items and participants, then start sharing from the setup screen.")}</p>
         <Link
           href={`/bills/new?billId=${billId}`}
           className="inline-block rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white"
         >
-          Continue setup
-        </Link>
+          {t("Continue setup")}</Link>
         <div className="mt-6">
           <DeleteBillButton billId={billId} variant="danger-block" />
         </div>
@@ -295,7 +291,7 @@ export default function BillRoomPage() {
 
   if (showJoin) {
     return (
-      <AppShell title="Join bill" showHomeLink={false}>
+      <AppShell title={t("Join bill")} showHomeLink={false}>
         <div className="mb-4">
           <TunnelHint />
         </div>
@@ -303,8 +299,7 @@ export default function BillRoomPage() {
           {bill.title}
         </p>
         <p className="mb-3 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          Who are you?
-        </p>
+          {t("Who are you?")}</p>
         <ul className="mb-4 flex flex-col gap-2">
           {participants.map((p) => (
             <li key={p.id}>
@@ -319,13 +314,12 @@ export default function BillRoomPage() {
           ))}
         </ul>
         <p className="mb-2 text-xs uppercase tracking-wide text-zinc-400">
-          Or add yourself
-        </p>
+          {t("Or add yourself")}</p>
         <form onSubmit={joinWithNewName} className="flex flex-col gap-2">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="Your name"
+            placeholder={t("Your name")}
             className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
           <button
@@ -333,11 +327,11 @@ export default function BillRoomPage() {
             disabled={joinBusy}
             className="rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {joinBusy ? "Joining…" : "Join as new person"}
+            {joinBusy ? t("Joining…") : t("Join as new person")}
           </button>
         </form>
         {localErr ? (
-          <p className="mt-2 text-sm text-red-600">{localErr}</p>
+          <p className="mt-2 text-sm text-red-600">{t(localErr)}</p>
         ) : null}
       </AppShell>
     );
@@ -358,9 +352,9 @@ export default function BillRoomPage() {
               onClick={copyShare}
               className="rounded-lg px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
             >
-              {copied ? "Copied" : "Copy link"}
+              {copied ? t("Copied") : t("Copy link")}
             </button>
-            <DeleteBillButton billId={billId} label="Delete" />
+            <DeleteBillButton billId={billId} label={t("Delete")} />
           </div>
         ) : null
       }
@@ -371,12 +365,9 @@ export default function BillRoomPage() {
       {needOwnerIdentity ? (
         <div className="mb-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/80">
           <p className="font-medium text-zinc-800 dark:text-zinc-100">
-            Optional: join as a participant
-          </p>
+            {t("Optional: join as a participant")}</p>
           <p className="mt-1 text-xs text-zinc-500">
-            Select yourself if you are also splitting items. You can skip this
-            and only manage the bill.
-          </p>
+            {t("Select yourself if you are also splitting items. You can skip this and only manage the bill.")}</p>
           <ul className="mt-2 flex flex-col gap-1">
             {participants.map((p) => (
               <li key={p.id}>
@@ -397,8 +388,7 @@ export default function BillRoomPage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/40">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
-              You
-            </p>
+              {t("You")}</p>
             <p className="text-lg font-semibold text-emerald-950 dark:text-emerald-50">
               {me.name}
             </p>
@@ -413,7 +403,7 @@ export default function BillRoomPage() {
                   : "bg-emerald-600 text-white"
               }`}
             >
-              {me.isDone ? "Mark not done" : "I’m done"}
+              {me.isDone ? t("Mark not done") : t("I’m done")}
             </button>
           ) : null}
         </div>
@@ -424,11 +414,9 @@ export default function BillRoomPage() {
           {allDone ? (
             <div className="mb-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-3 dark:border-emerald-800 dark:bg-emerald-950/50">
               <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-                Everyone is done — ready to finalize
-              </p>
+                {t("Everyone is done — ready to finalize")}</p>
               <p className="mt-1 text-xs text-emerald-800/90 dark:text-emerald-200/90">
-                All {participants.length} people marked done. Review totals,
-                then finalize.
+                {t("All {count} people marked done. Review totals, then finalize.", { count: participants.length })}
               </p>
               {notificationPermission() !== "granted" &&
               notificationPermission() !== "unsupported" ? (
@@ -437,17 +425,15 @@ export default function BillRoomPage() {
                   className="mt-2 text-xs font-medium text-emerald-700 underline dark:text-emerald-300"
                   onClick={() => void requestNotificationPermission()}
                 >
-                  Enable notifications next time
-                </button>
+                  {t("Enable notifications next time")}</button>
               ) : null}
             </div>
           ) : null}
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
-              Progress
-            </p>
+              {t("Progress")}</p>
             <p className="text-sm text-zinc-500">
-              {doneCount}/{participants.length} done
+              {t("{done}/{total} done", { done: doneCount, total: participants.length })}
             </p>
           </div>
           <ul className="mt-3 flex flex-col gap-2">
@@ -466,7 +452,7 @@ export default function BillRoomPage() {
                       : "text-amber-600 dark:text-amber-400"
                   }
                 >
-                  {p.isDone ? "Done" : "Pending"}
+                  {p.isDone ? t("Done") : t("Pending")}
                 </span>
               </li>
             ))}
@@ -478,24 +464,22 @@ export default function BillRoomPage() {
             className="mt-4 w-full rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
           >
             {finalizeBusy
-              ? "Finalizing…"
+              ? t("Finalizing…")
               : allDone
-                ? "Finalize bill"
-                : `Finalize locked · ${doneCount}/${participants.length} done`}
+                ? t("Finalize bill")
+                : t("Finalize locked · {done}/{total} done", { done: doneCount, total: participants.length })}
           </button>
           {!allDone && participants.length > 0 ? (
             <p className="mt-2 text-center text-[11px] text-zinc-500">
-              Everyone must tap “I’m done” before you can finalize.
-            </p>
+              {t("Everyone must tap “I’m done” before you can finalize.")}</p>
           ) : null}
         </div>
       ) : (
         <div className="mb-4 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
-            Group progress
-          </p>
+            {t("Group progress")}</p>
           <p className="mt-1 text-sm text-zinc-500">
-            {doneCount} of {participants.length} marked done
+            {t("{done} of {total} marked done", { done: doneCount, total: participants.length })}
           </p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {participants.map((p) => (
@@ -516,8 +500,7 @@ export default function BillRoomPage() {
 
       <section className="mb-6">
         <h2 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-          Items
-        </h2>
+          {t("Items")}</h2>
         <ul className="flex flex-col gap-3">
           {assignments.map((row) => {
             const mode = getItemSplitMode(row.item);
@@ -586,11 +569,11 @@ export default function BillRoomPage() {
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
                       {mode === "shared"
-                        ? "Equal split"
+                        ? t("Equal split")
                         : mode === "quantity"
-                          ? "By units"
-                          : "Single payer"}
-                      {canTapSelect ? " · tap to select" : ""}
+                          ? t("By units")
+                          : t("Single payer")}
+                      {canTapSelect ? t(" · tap to select") : ""}
                     </p>
                     <p className="font-medium text-zinc-900 dark:text-zinc-50">
                       {row.item.name}
@@ -606,31 +589,28 @@ export default function BillRoomPage() {
                       </p>
                     ) : null}
                     <p className="text-sm text-zinc-500">
-                      {formatMoney(row.item.price)} total
-                    </p>
+                      {formatMoney(row.item.price)} {t("total")}</p>
                     {row.assignment === "unassigned" ? (
                       <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
                         {mode === "quantity"
-                          ? "Unassigned — add units to split"
+                          ? t("Unassigned — add units to split")
                           : mode === "single"
-                            ? "Unassigned — one person must claim"
-                            : "Unassigned — not included in totals"}
+                            ? t("Unassigned — one person must claim")
+                            : t("Unassigned — not included in totals")}
                       </p>
                     ) : mode === "shared" ? (
                       <p className="mt-1 text-xs text-zinc-500">
-                        {row.selectorCount} people ·{" "}
-                        {formatMoney(row.sharePerPerson ?? 0)} each
+                        {t("{count} people · {amount} each", { count: row.selectorCount, amount: formatMoney(row.sharePerPerson ?? 0) })}
                       </p>
                     ) : mode === "quantity" ? (
                       <p className="mt-1 text-xs text-zinc-500">
-                        {row.totalClaimedUnits} units claimed · share by
-                        proportion
+                        {t("{count} units claimed · share by proportion", { count: row.totalClaimedUnits })}
                       </p>
                     ) : (
                       <p className="mt-1 text-xs text-zinc-500">
                         {assigneeName ? (
                           <>
-                            Full line: <strong>{assigneeName}</strong>
+                            {t("Full line:")}<strong>{assigneeName}</strong>
                           </>
                         ) : (
                           "—"
@@ -642,7 +622,7 @@ export default function BillRoomPage() {
                     row.assignment === "assigned" &&
                     myShare > 0 ? (
                       <p className="mt-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                        Your share: {formatMoney(myShare)}
+                        {t("Your share:")}{formatMoney(myShare)}
                       </p>
                     ) : null}
                   </div>
@@ -663,8 +643,7 @@ export default function BillRoomPage() {
                         className="flex shrink-0 flex-col gap-0.5 text-[10px] font-medium text-zinc-500"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        Units
-                        <input
+                        {t("Units")}<input
                           type="number"
                           min={0}
                           max={999}
@@ -685,7 +664,7 @@ export default function BillRoomPage() {
                             : "border border-zinc-300 text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
                         }`}
                       >
-                        {iPayAll ? "You pay all" : "I pay all"}
+                        {iPayAll ? t("You pay all") : t("I pay all")}
                       </span>
                     )
                   ) : null}
@@ -700,7 +679,7 @@ export default function BillRoomPage() {
                       } else if (mode === "quantity") {
                         const u = claimedQtyFor(row.item.id, p.id);
                         active = u > 0;
-                        suffix = u > 0 ? ` ${u}u` : "";
+                        suffix = u > 0 ? ` ${t("{count} units", { count: u })}` : "";
                       } else {
                         active = row.assigneeId === p.id;
                       }
@@ -729,8 +708,7 @@ export default function BillRoomPage() {
 
       <section className="mb-24 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
         <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-          Live totals
-        </h2>
+          {t("Live totals")}</h2>
         <ul className="flex flex-col gap-2">
           {participants.map((p) => (
             <li
@@ -749,7 +727,7 @@ export default function BillRoomPage() {
       </section>
 
       {localErr ? (
-        <p className="mb-4 text-sm text-red-600">{localErr}</p>
+        <p className="mb-4 text-sm text-red-600">{t(localErr)}</p>
       ) : null}
 
       {bill.status === "active" && !isOwner ? (
@@ -759,8 +737,7 @@ export default function BillRoomPage() {
               href={`/bill/${billId}/summary`}
               className="block text-center text-xs text-zinc-500 underline"
             >
-              Summary appears after the owner finalizes
-            </Link>
+              {t("Summary appears after the owner finalizes")}</Link>
           </div>
         </div>
       ) : null}

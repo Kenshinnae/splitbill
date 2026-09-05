@@ -1,3 +1,5 @@
+"use client";
+import { useI18n } from "@/components/LanguageProvider";
 export function LoadingScreen({
   message = "Loading…",
   hint,
@@ -6,6 +8,7 @@ export function LoadingScreen({
   /** Shown under the spinner (e.g. in-app browser / tunnel guidance). */
   hint?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex min-h-[50vh] flex-1 flex-col items-center justify-center gap-3 px-4">
       <div
@@ -13,11 +16,11 @@ export function LoadingScreen({
         aria-hidden
       />
       <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-        {message}
+        {t(message)}
       </p>
       {hint ? (
         <p className="max-w-sm text-center text-xs leading-relaxed text-zinc-400 dark:text-zinc-500">
-          {hint}
+          {t(hint)}
         </p>
       ) : null}
     </div>

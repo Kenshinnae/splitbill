@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/LanguageProvider";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -7,6 +9,7 @@ import { TunnelHint } from "@/components/TunnelHint";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function HomePage() {
+  const { t } = useI18n();
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -26,24 +29,20 @@ export default function HomePage() {
             SplitBill
           </p>
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Shared bill splitting
-          </h1>
+            {t("Shared bill splitting")}</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Real-time receipts with friends — no app store install.
-          </p>
+            {t("Real-time receipts with friends — no app store install.")}</p>
         </div>
         <Link
           href="/login"
           className="block w-full rounded-2xl bg-emerald-600 py-3.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
         >
-          Owner sign in
-        </Link>
+          {t("Owner sign in")}</Link>
         <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
-          Joining a bill? Open the <strong>/bill/…</strong> link your host sent
-          — you don&apos;t need an account.
+          {t("Joining a bill? Open the link your host sent — you don't need an account.")}
         </p>
         {loading ? (
-          <p className="text-center text-xs text-zinc-400">Checking session…</p>
+          <p className="text-center text-xs text-zinc-400">{t("Checking session…")}</p>
         ) : null}
       </div>
     </div>

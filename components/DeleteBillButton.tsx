@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/LanguageProvider";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { deleteBill } from "@/lib/bill-service";
@@ -23,6 +25,7 @@ export function DeleteBillButton({
   className = "",
   variant = "default",
 }: Props) {
+  const { t } = useI18n();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export function DeleteBillButton({
   async function onDelete() {
     if (
       !window.confirm(
-        "Delete this bill and all its items, participants, and receipt? This cannot be undone.",
+        t("Delete this bill and all its items, participants, and receipt? This cannot be undone."),
       )
     ) {
       return;
@@ -70,13 +73,13 @@ export function DeleteBillButton({
           void onDelete();
         }}
         className={`${base} disabled:opacity-50 ${className}`}
-        aria-label={label}
+        aria-label={t(label)}
       >
-        {busy ? "Deleting…" : label}
+        {busy ? t("Deleting…") : t(label)}
       </button>
       {err ? (
         <span className="mt-1 text-xs text-red-600" role="alert">
-          {err}
+          {t(err)}
         </span>
       ) : null}
     </span>

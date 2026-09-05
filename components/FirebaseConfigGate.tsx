@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/LanguageProvider";
+
 import { useEffect, useState } from "react";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import {
@@ -41,10 +43,10 @@ async function loadFirebaseConfig(): Promise<FirebasePublicConfig> {
 
 /** Wait for Firebase config before any client hook touches Auth/Firestore. */
 export function FirebaseConfigGate({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return isFirebasePublicConfigReady(resolveFirebasePublicConfig());
-  });
+  const { t } = useI18n();
+  // Match SSR and the first hydration render even when the head script has
+  // already loaded config. Mount Firebase consumers only after this effect.
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,13 +69,13 @@ export function FirebaseConfigGate({ children }: { children: React.ReactNode }) 
   if (error) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-6 text-center">
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-red-600">{t(error)}</p>
       </div>
     );
   }
 
   if (!ready) {
-    return <LoadingScreen message="Loading…" />;
+    return <LoadingScreen message={t("Loading…")} />;
   }
 
   return <>{children}</>;

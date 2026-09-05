@@ -1,3 +1,5 @@
+import localFont from "next/font/local";
+import { LanguageProvider, LanguageSwitch } from "@/components/LanguageProvider";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { FirebaseConfigGate } from "@/components/FirebaseConfigGate";
@@ -8,6 +10,8 @@ import {
   isFirebasePublicConfigReady,
   readFirebasePublicConfigFromEnv,
 } from "@/lib/firebase-public-config";
+
+const thaiFont = localFont({ src: "../public/fonts/NotoSansThaiLooped.ttf", variable: "--font-thai", weight: "100 900", display: "swap" });
 
 export const metadata: Metadata = {
   title: "SplitBill — shared bill splitting",
@@ -52,7 +56,7 @@ export default function RootLayout({
     : undefined;
 
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="th" className={`h-full antialiased ${thaiFont.variable}`}>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -62,7 +66,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <PwaRegister />
-        <FirebaseConfigGate>{children}</FirebaseConfigGate>
+        <LanguageProvider>
+          <LanguageSwitch />
+          <FirebaseConfigGate>{children}</FirebaseConfigGate>
+        </LanguageProvider>
       </body>
     </html>
   );

@@ -1,3 +1,4 @@
+import { resolveFirebasePublicConfigForServer } from "@/lib/firebase-server-config";
 import { NextResponse } from "next/server";
 import {
   RECEIPT_EXTRACTION_JSON_SCHEMA,
@@ -88,7 +89,7 @@ function extractAssistantJsonText(data: unknown): string | null {
  * not NEXT_PUBLIC_FIREBASE_PROJECT_ID, so tokeninfo falsely rejects them.
  */
 async function verifyFirebaseIdToken(idToken: string): Promise<boolean> {
-  const webApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const webApiKey = resolveFirebasePublicConfigForServer()?.apiKey;
   if (!webApiKey?.trim()) return false;
   try {
     const res = await fetch(
@@ -97,6 +98,7 @@ async function verifyFirebaseIdToken(idToken: string): Promise<boolean> {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
+        signal: AbortSignal.timeout(15_000),
       },
     );
     if (!res.ok) return false;
@@ -107,7 +109,7 @@ async function verifyFirebaseIdToken(idToken: string): Promise<boolean> {
   }
 }
 
-export async function POST(request: Request) {
+async function extractReceipt(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey?.trim()) {
     return NextResponse.json(
@@ -198,6 +200,7 @@ export async function POST(request: Request) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(90_000),
   });
 
   const raw = await ores.text();
@@ -244,4 +247,15 @@ export async function POST(request: Request) {
     vat: Number(extraction.vat) || 0,
     total: Number(extraction.total) || 0,
   });
+}
+
+export async function POST(request: Request) {
+  try {
+    return await extractReceipt(request);
+  } catch (error) {
+    const timeout = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    return NextResponse.json({ error: timeout
+      ? "Reading took too long. Keep this screen open and try again."
+      : "Receipt service is unavailable. Please try again later." }, { status: timeout ? 504 : 502 });
+  }
 }

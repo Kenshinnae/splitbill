@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/LanguageProvider";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
@@ -11,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 export default function LoginPage() {
+  const { t } = useI18n();
   const { user, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -26,7 +29,7 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <AppShell title="Sign in" showHomeLink={false}>
+      <AppShell title={t("Sign in")} showHomeLink={false}>
         <LoadingScreen />
       </AppShell>
     );
@@ -34,8 +37,8 @@ export default function LoginPage() {
 
   if (user) {
     return (
-      <AppShell title="Sign in" showHomeLink={false}>
-        <LoadingScreen message="Redirecting…" />
+      <AppShell title={t("Sign in")} showHomeLink={false}>
+        <LoadingScreen message={t("Redirecting…")} />
       </AppShell>
     );
   }
@@ -60,11 +63,9 @@ export default function LoginPage() {
   }
 
   return (
-    <AppShell title="Owner sign in" showHomeLink={false}>
+    <AppShell title={t("Owner sign in")} showHomeLink={false}>
       <p className="mb-6 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-        This app is invite-only. Use the account your administrator created in
-        Firebase Authentication.
-      </p>
+        {t("This app is invite-only. Use the account your administrator created in Firebase Authentication.")}</p>
       <div className="mb-4">
         <TunnelHint />
       </div>
@@ -74,8 +75,7 @@ export default function LoginPage() {
       >
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-zinc-700 dark:text-zinc-200">
-            Email
-          </span>
+            {t("Email")}</span>
           <input
             type="email"
             autoComplete="email"
@@ -87,8 +87,7 @@ export default function LoginPage() {
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-zinc-700 dark:text-zinc-200">
-            Password
-          </span>
+            {t("Password")}</span>
           <input
             type="password"
             autoComplete="current-password"
@@ -100,7 +99,7 @@ export default function LoginPage() {
         </label>
         {error ? (
           <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-            {error}
+            {t(error)}
           </p>
         ) : null}
         <button
@@ -108,16 +107,14 @@ export default function LoginPage() {
           disabled={busy}
           className="mt-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
         >
-          {busy ? "Signing in…" : "Sign in"}
+          {busy ? t("Signing in…") : t("Sign in")}
         </button>
       </form>
       <p className="mt-6 text-center text-xs text-zinc-500">
-        Guest? Open the share link you received — no account needed.
-      </p>
+        {t("Guest? Open the share link you received — no account needed.")}</p>
       <p className="mt-4 text-center text-xs text-zinc-400">
         <Link href="/" className="underline underline-offset-2">
-          Home
-        </Link>
+          {t("Home")}</Link>
       </p>
     </AppShell>
   );

@@ -1,97 +1,49 @@
-# SplitBill — real-time collaborative bill splitting
+# SplitBill
 
-Mobile-first web app: an authenticated **owner** creates a bill, uploads a receipt (mock OCR for line items), adds participants, and shares a link. **Guests** join without an account, pick their name, select items in real time, and mark themselves done. The owner finalizes to lock the bill and show per-person totals.
+เว็บหารบิลแบบ real time สำหรับมือถือ เจ้าของบิล login ด้วย Firebase Email/Password สร้างรายการจากรูปใบเสร็จด้วย OpenAI หรือกรอกเอง แชร์ลิงก์ให้เพื่อนเลือกชื่อและรายการโดยไม่ต้องสมัครบัญชี รองรับหารเท่ากัน หารตามจำนวนที่รับ และจ่ายทั้งรายการคนเดียว เมื่อทุกคนกด done เจ้าของสรุปบิลพร้อมแสดงรูป QR รับเงินได้
 
-## Stack
+## เริ่มอ่านโปรเจค
 
-- Next.js (App Router), TypeScript, Tailwind CSS  
-- Firebase Authentication (email/password for owners)  
-- Cloud Firestore (live listeners)  
-- Firebase Storage (receipt images)
+สำรวจจาก source ณ **2026-09-05**, baseline commit `6a9558a` ไม่ใช่ผลยืนยัน production เริ่มที่ [สารบัญ](docs/README.md) แล้วอ่านเฉพาะหัวข้อที่จะแก้
 
-## Quick start
+| เอกสาร | ใช้เมื่อ |
+| --- | --- |
+| [Architecture](docs/ARCHITECTURE.md) | ทำความเข้าใจ routes, components และ flow หน้าจอ |
+| [Data and calculations](docs/DATA_AND_CALCULATIONS.md) | แก้ Firestore, realtime, สูตรหาร, finalize, QR |
+| [Receipt extraction](docs/RECEIPT_EXTRACTION.md) | แก้ upload, OpenAI, schema, parser |
+| [Configuration and deployment](docs/CONFIG_AND_DEPLOYMENT.md) | ตั้งค่าเครื่อง, Firebase, Hostinger, push |
+| [Maintenance](docs/MAINTENANCE.md) | หาว่าควรแก้ไฟล์ใดและตรวจอะไร |
+| [Known issues](docs/KNOWN_ISSUES.md) | ดูข้อจำกัดและประเด็นที่พบจาก source |
+| [Verification](docs/VERIFICATION.md) | ผลตรวจ baseline และขอบเขตที่ยังไม่ได้ทดสอบ |
+
+## Stack และคำสั่ง
+
+Next.js **16.2.3** App Router, React **19.2.4**, TypeScript strict, Tailwind CSS 4, Firebase JS SDK 12 และ Vitest 4 ใช้ Node.js ตาม package.json: `>=20` ไม่มี Firebase Admin SDK หรือ backend CRUD ของบิล การเขียนบิลเกิดจาก browser ไป Firestore โดยตรง
 
 ```bash
-npm install
-cp .env.example .env.local
-# Edit .env.local with your Firebase web app keys (Project settings → Your apps).
+npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). You will be redirected to `/login` until an owner account exists.
+ตั้ง `.env.local` ก่อนใช้ Firebase และอ่านใบเสร็จ ดู [คู่มือตั้งค่า](docs/CONFIG_AND_DEPLOYMENT.md) เครื่องที่สำรวจมี `.env.example` แต่ยังไม่ถูก track จึงอาจไม่มีหลัง clone ใหม่
 
-## Environment variables
-
-Required in `.env.local` (all `NEXT_PUBLIC_*` are exposed to the browser):
-
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Web API key |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | e.g. `your-project.firebaseapp.com` |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Project ID |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage bucket name |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Sender ID |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | App ID |
-
-## Firebase Console checklist
-
-1. **Create a project** (or use an existing one) and register a **Web** app to obtain the config values above.  
-2. **Authentication**  
-   - Enable **Email/Password**.  
-   - Do **not** expose a public sign-up screen in this product; add users manually (see below) or run the seed script while sign-up is still allowed.  
-3. **Firestore**  
-   - Create database (production or test mode for first try).  
-   - Deploy rules from `firebase/firestore.rules` (Console → Firestore → Rules), or use the Firebase CLI.  
-   - Create the composite index from `firebase/firestore.indexes.json` when prompted by the app error link, or deploy indexes with CLI.  
-4. **Storage**  
-   - Enable Storage.  
-   - Apply rules from `firebase/storage.rules`.  
-
-## Create the owner login manually
-
-**Recommended (works even when client sign-up is disabled):**
-
-1. Firebase Console → **Authentication** → **Users** → **Add user**.  
-2. Enter email and password.  
-3. Sign in at `/login` in the app.
-
-**Optional script** (only if the Identity Toolkit **signUp** API is allowed for your key / project settings):
-
-```bash
-NEXT_PUBLIC_FIREBASE_API_KEY=your_key npm run seed-owner -- owner@example.com 'secure-password'
-```
-
-If this fails with `OPERATION_NOT_ALLOWED` or sign-up disabled, use the Console method above.
-
-## Security rules
-
-- **Firestore:** `firebase/firestore.rules` — owners own their bills; guests with a link can read **active/completed** bills and write participants/selections while **active** (MVP trust model). Comments note where to tighten (App Check, field validation, custom claims).  
-- **Storage:** `firebase/storage.rules` — authenticated uploads under `bills/{billId}/…`; reads are public in MVP (change for production).
-
-## Project layout
-
-| Path | Purpose |
-|------|---------|
-| `app/` | Routes: `/`, `/login`, `/dashboard`, `/bills/new`, `/bill/[billId]`, `/bill/[billId]/summary` |
-| `components/` | Shared UI (`AppShell`, `OwnerGuard`, `LoadingScreen`, …) |
-| `hooks/` | `useAuth`, `useRealtimeBill`, `useOwnerBills` |
-| `lib/` | Firebase init, Firestore helpers, mock OCR, totals math |
-| `types/` | Shared TypeScript models |
-| `firebase/` | Rules and index definitions |
-| `scripts/seed-owner.mjs` | Optional REST helper to create a user |
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Development server |
+| คำสั่ง | หน้าที่ |
+| --- | --- |
+| `npm run dev` | Next dev ด้วย webpack |
 | `npm run build` | Production build |
-| `npm run start` | Run production server |
+| `npm start` | Next server บน 0.0.0.0, ใช้ PORT หรือ 3000 |
 | `npm run lint` | ESLint |
-| `npm run seed-owner` | Optional owner user creation via API |
+| `npm test` / `npm run test:watch` | Vitest ครั้งเดียว / watch |
+| `./node_modules/.bin/tsc --noEmit --incremental false` | Typecheck โดยไม่สร้าง incremental cache |
+| `npm run ngrok` | เปิด tunnel ไป dev server ที่รันอยู่ |
+| `npm run seed-owner` | สร้าง Firebase Auth user ผ่าน REST มีผลกับระบบภายนอก |
+| `npm run deploy:firebase-rules` | Deploy Firestore และ Storage rules ไม่รวม indexes |
+| `npm run zip:hostinger` | สร้าง ZIP สำหรับวิธี upload เดิม พร้อม env production |
 
-## Product notes
+## Repository และการเผยแพร่
 
-- OCR is **mocked** (`lib/mock-ocr.ts`); replace with a real service when ready.  
-- Totals are **computed on the client** from items + selections (equal split per item among everyone who selected it). Items with no selectors are labeled **unassigned** and excluded from totals.  
-- **Owner routes** (`/dashboard`, `/bills/new`) are guarded on the client with `OwnerGuard`; guests use `/bill/[id]` only.
+Repository: [Kenshinnae/splitbill](https://github.com/Kenshinnae/splitbill), branch `main` และ remote `origin` ตั้งถูกต้องใน checkout นี้แล้ว
+
+**ตามข้อมูลจากเจ้าของโปรเจค การ push จะทำให้ Hostinger build ใหม่ทันที** ถือเป็นขั้นตอน deploy อ่าน [คู่มือ deploy](docs/CONFIG_AND_DEPLOYMENT.md) ก่อนดำเนินการ รอบแก้ไขถัดมาเพิ่มไทย/อังกฤษและแก้ PWA upload โดยผู้ใช้อนุญาตให้ push แล้ว ดู [บันทึกปัจจุบัน](docs/LANGUAGE_AND_PWA.md)
+
+เอกสารช่วยลดการสำรวจทั้งโปรเจค เวลาแก้จริงยังต้องเปิด source เฉพาะส่วนที่เกี่ยวข้องและปรับเอกสารตาม โดยเฉพาะ Next.js ให้อ่านคู่มือเวอร์ชันที่ติดตั้งใน `node_modules/next/dist/docs/` ตาม [AGENTS.md](AGENTS.md)

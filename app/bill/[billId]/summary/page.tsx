@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/LanguageProvider";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo } from "react";
@@ -12,6 +14,7 @@ import { buildFinalSummary } from "@/lib/calculations";
 import { formatMoney } from "@/lib/currency";
 
 export default function BillSummaryPage() {
+  const { t } = useI18n();
   const params = useParams();
   const billId = params.billId as string;
   const { user } = useAuth();
@@ -32,7 +35,7 @@ export default function BillSummaryPage() {
 
   if (loading && !bill) {
     return (
-      <AppShell title="Summary" showHomeLink={isOwner}>
+      <AppShell title={t("Summary")} showHomeLink={isOwner}>
         <LoadingScreen />
       </AppShell>
     );
@@ -40,9 +43,9 @@ export default function BillSummaryPage() {
 
   if (error || !bill) {
     return (
-      <AppShell title="Summary" showHomeLink={!!user}>
+      <AppShell title={t("Summary")} showHomeLink={!!user}>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {error ?? "Bill not found."}
+          {t(error ?? "Bill not found.")}
         </p>
       </AppShell>
     );
@@ -56,15 +59,12 @@ export default function BillSummaryPage() {
       <AppShell title={bill.title} showHomeLink={isOwner}>
         <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-6 text-center dark:border-zinc-800 dark:bg-zinc-900/60">
           <p className="text-sm text-zinc-700 dark:text-zinc-200">
-            The owner has not finalized this bill yet. Totals may still change
-            in the live room.
-          </p>
+            {t("The owner has not finalized this bill yet. Totals may still change in the live room.")}</p>
           <Link
             href={`/bill/${billId}`}
             className="mt-4 inline-block text-sm font-medium text-emerald-600 underline dark:text-emerald-400"
           >
-            Back to live bill
-          </Link>
+            {t("Back to live bill")}</Link>
         </div>
       </AppShell>
     );
@@ -72,7 +72,7 @@ export default function BillSummaryPage() {
 
   return (
     <AppShell
-      title="Final summary"
+      title={t("Final summary")}
       showHomeLink={isOwner}
       action={
         isOwner ? (
@@ -81,9 +81,8 @@ export default function BillSummaryPage() {
               href="/dashboard"
               className="text-xs font-medium text-emerald-600 dark:text-emerald-400"
             >
-              Dashboard
-            </Link>
-            <DeleteBillButton billId={billId} label="Delete" />
+              {t("Dashboard")}</Link>
+            <DeleteBillButton billId={billId} label={t("Delete")} />
           </div>
         ) : null
       }
@@ -92,7 +91,7 @@ export default function BillSummaryPage() {
         {bill.title}
       </p>
       <p className="mb-6 text-xs text-zinc-500">
-        Read-only · {participants.length} people · {items.length} items
+        {t("Read-only · {people} people · {items} items", { people: participants.length, items: items.length })}
       </p>
 
       <div className="flex flex-col gap-3">
@@ -107,8 +106,7 @@ export default function BillSummaryPage() {
                   {r.name}
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  {r.assignedItemsCount} assigned item
-                  {r.assignedItemsCount === 1 ? "" : "s"}
+                  {t("{count} assigned items", { count: r.assignedItemsCount })}
                 </p>
               </div>
               <p className="text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
@@ -121,7 +119,7 @@ export default function BillSummaryPage() {
 
       <div className="mt-6 rounded-2xl border border-zinc-900/10 bg-zinc-900 px-4 py-4 text-white dark:border-zinc-100/10 dark:bg-zinc-100 dark:text-zinc-900">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium opacity-90">Group total</span>
+          <span className="text-sm font-medium opacity-90">{t("Group total")}</span>
           <span className="text-xl font-bold tabular-nums">
             {formatMoney(grandTotal)}
           </span>
@@ -131,34 +129,29 @@ export default function BillSummaryPage() {
       {bill.ownerPaymentQrUrl ? (
         <section className="mt-8 rounded-2xl border border-zinc-200/90 bg-white p-4 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Pay the host
-          </h2>
+            {t("Pay the host")}</h2>
           <p className="mt-1 text-xs text-zinc-500">
-            Scan this QR to transfer your share.
-          </p>
+            {t("Scan this QR to transfer your share.")}</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={bill.ownerPaymentQrUrl}
-            alt="Host payment QR"
+            alt={t("Host payment QR")}
             className="mx-auto mt-4 max-h-64 w-auto rounded-xl border border-zinc-200 bg-white object-contain p-2 dark:border-zinc-700"
           />
         </section>
       ) : isOwner ? (
         <p className="mt-6 text-center text-xs text-zinc-500">
-          Tip: add your payment QR in{" "}
+          {t("Tip: add your payment QR in")}{" "}
           <Link
             href="/settings"
             className="font-medium text-emerald-600 underline dark:text-emerald-400"
           >
-            Settings
-          </Link>{" "}
-          so guests can pay you on the next finalized bill.
-        </p>
+            {t("Settings")}</Link>{" "}
+          {t("so guests can pay you on the next finalized bill.")}</p>
       ) : null}
 
       <p className="mt-8 text-center text-xs text-zinc-400">
-        SplitBill · amounts split evenly per item among who selected it
-      </p>
+        {t("SplitBill · amounts follow each item's split mode")}</p>
     </AppShell>
   );
 }
