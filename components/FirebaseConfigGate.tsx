@@ -4,48 +4,14 @@ import { useI18n } from "@/components/LanguageProvider";
 
 import { useEffect, useState } from "react";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import {
-  isFirebasePublicConfigReady,
-  resolveFirebasePublicConfig,
-  type FirebasePublicConfig,
-} from "@/lib/firebase-public-config";
-
-async function loadFirebaseConfig(): Promise<FirebasePublicConfig> {
-  const existing = resolveFirebasePublicConfig();
-  if (isFirebasePublicConfigReady(existing)) return existing;
-
-  try {
-    const staticRes = await fetch("/firebase-config.json", { cache: "no-store" });
-    if (staticRes.ok) {
-      const fromFile = (await staticRes.json()) as FirebasePublicConfig;
-      if (isFirebasePublicConfigReady(fromFile)) {
-        window.__FIREBASE_CONFIG__ = fromFile;
-        return fromFile;
-      }
-    }
-  } catch {
-    /* try API next */
-  }
-
-  const res = await fetch("/api/public-config", { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(
-      "Could not load Firebase settings. Redeploy with npm run zip:hostinger (includes public/firebase-config.json).",
-    );
-  }
-  const config = (await res.json()) as FirebasePublicConfig;
-  if (!isFirebasePublicConfigReady(config)) {
-    throw new Error("Firebase settings from the server are incomplete.");
-  }
-  window.__FIREBASE_CONFIG__ = config;
-  return config;
-}
+import { loadFirebaseConfig } from "@/lib/load-firebase-config";
 
 /** Wait for Firebase config before any client hook touches Auth/Firestore. */
 export function FirebaseConfigGate({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   // Match SSR and the first hydration render even when the head script has
   // already loaded config. Mount Firebase consumers only after this effect.
+  const [attempt, setAttempt] = useState(0);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,12 +30,15 @@ export function FirebaseConfigGate({ children }: { children: React.ReactNode }) 
     return () => {
       cancelled = true;
     };
-  }, [ready]);
+  }, [ready, attempt]);
 
   if (error) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-sm text-red-600">{t(error)}</p>
+        <button type="button" className="rounded-xl bg-emerald-600 px-4 py-2 text-white" onClick={() => { setError(null); setAttempt((value) => value + 1); }}>
+          {t("Try again")}
+        </button>
       </div>
     );
   }

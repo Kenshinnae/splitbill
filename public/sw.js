@@ -7,8 +7,16 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Leave uploads and API requests to the browser network stack.
-// No fetch interception or offline cache is needed for this realtime app.
+// Bypass previously cached HTML that references assets from an older deployment.
+// Only full document navigations are handled: uploads, API, RSC and assets stay native.
+// No forced reload on activation: existing forms/uploads must not be interrupted.
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== "GET" || request.mode !== "navigate" || url.origin !== self.location.origin) return;
+  url.searchParams.set("__sb_release", "startup-recovery-20260905");
+  event.respondWith(fetch(new Request(url, { headers: request.headers, credentials: "same-origin", redirect: "follow", cache: "no-store" })));
+});
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

@@ -11,16 +11,15 @@ export function useAuth() {
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (u?.email) {
-        try {
-          await ensureUserProfile(u.uid, u.email);
-        } catch {
-          /* profile sync is best-effort */
-        }
-      }
+    const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
+      if (u?.email) {
+        // Firestore writes may remain pending offline. Never gate Auth/UI on one.
+        void ensureUserProfile(u.uid, u.email).catch(() => {
+          /* profile sync is best-effort */
+        });
+      }
     });
     return () => unsub();
   }, []);

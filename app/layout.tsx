@@ -1,4 +1,5 @@
 import localFont from "next/font/local";
+import { connection } from "next/server";
 import { LanguageProvider, LanguageSwitch } from "@/components/LanguageProvider";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
@@ -41,11 +42,14 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Runtime config and document asset references must come from this deployment.
+  // Prerendered HTML can outlive its hashed assets in a hosting/CDN cache.
+  await connection();
   const fromFile = readFirebasePublicConfigFromFile();
   const fromEnv = readFirebasePublicConfigFromEnv();
   const embedded =

@@ -56,7 +56,7 @@ Server: Identity Toolkit timeout 15 วินาที, OpenAI fetch timeout 90 
 
 ## Service worker
 
-`public/sw.js` ไม่ดัก fetch แล้ว ให้ browser จัดการ upload/API/network โดยตรง ยังคง install/activate และ local notification click; ไม่มี offline cache หรือ remote push
+`public/sw.js` ดักเฉพาะ GET document navigation ที่ origin เดียวกัน ให้ fetch แบบ no-store พร้อม `__sb_release=startup-recovery-20260905` เพื่อข้าม HTML เก่า โดยรักษา query เดิม เช่น billId; upload/API/RSC/assets ให้ browser จัดการตรง ไม่มี offline cache หรือ forced reload ตอน activate จึงไม่ขัดจังหวะฟอร์มที่เปิดอยู่
 
 `PwaRegister` register ด้วย updateViaCache=none และเรียก registration.update เพื่อรับ worker ใหม่ เมื่อ deploy แล้วเปิด PWA ขณะออนไลน์ให้ worker อัปเดต หากเปิดเวอร์ชันเก่าค้างอยู่ให้ปิดแล้วเปิดอีกครั้ง
 
@@ -71,3 +71,20 @@ Server: Identity Toolkit timeout 15 วินาที, OpenAI fetch timeout 90 
 - ไม่มี Firebase rules deploy หรือ dependency/model upgrade ในการแก้ครั้งนี้
 
 หลักฐานอ้างอิง API ที่อ่านประกอบ: [MDN HTMLImageElement](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/decode), [MDN Service workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers), คู่มือ Next.js ที่ติดตั้งเรื่อง fonts และ internationalization
+
+## แก้ Loading ค้างหลัง deploy (2026-09-05)
+
+พบจากเว็บ Hostinger จริง: `/dashboard` เคยส่ง HTML lang=en ไม่มี language switch และอ้าง CSS `10vk-y6~.hga3.css` ซึ่งตอบ 404 ขณะที่ `/dashboard?check=b085210` ส่ง HTML ใหม่ lang=th และเข้าสู่หน้า login ได้ เอกสาร HTML รุ่นก่อนมี `Cache-Control: s-maxage=31536000` จึงมีความเสี่ยงให้ HTML เก่าอยู่ต่อหลัง hashed assets ถูกแทนที่ ยังไม่ระบุว่า cache ที่ผิดมาจากชั้น browser หรือ CDN โดยลำพัง
+
+- `app/layout.tsx`: async และ `await connection()` ก่อน resolve config เพื่อ render เอกสารตาม request ป้องกัน prerendered HTML/cache ระยะยาว และอ่าน config runtime
+- `lib/firebase-bootstrap-script.ts`: embed config อย่างเดียว ลบ synchronous XMLHttpRequest ใน head ซึ่งอาจขวางการแสดงทั้งหน้า
+- `lib/load-firebase-config.ts`: โหลด static JSON แล้ว fallback API, timeout 8 วินาทีต่อ endpoint รวม response body; abort และแสดง error/ลองใหม่หลังทั้งสองทางล้มเหลว
+- `components/FirebaseConfigGate.tsx`: คง SSR/hydration ready=false, เพิ่มปุ่มลองใหม่พร้อมคำแปล
+- `hooks/useAuth.ts`: อัปเดต user/loading ทันทีที่ Auth พร้อม งานเขียน profile เป็น background best-effort เพราะ Firestore write อาจรอไม่สิ้นสุดตอน offline ไม่ควรใช้ขวางการเข้าสู่หน้า
+- `next.config.ts`: sw/config no-store; `X-SplitBill-Release: startup-recovery-20260905` ใช้ตรวจว่า Hostinger รันรุ่นนี้
+
+ตรวจ temp production build: 33 tests ผ่าน, lint/TypeScript/build ผ่าน; `/dashboard` คืน `private, no-cache, no-store, max-age=0, must-revalidate`, ภาษาไทยและไม่มี sync XHR โดยทุกหน้าหลักเป็น dynamic routes ยังคงคำเตือน NFT tracing เดิม
+
+หากต้องตรวจซ้ำหลัง deploy ให้ GET URL ปกติโดยไม่เติม query ตรวจ release header/cache-control และตรวจ CSS/JS ทุกไฟล์ที่ HTML อ้างถึงต้องตอบ 200 จากนั้นเปิด `/dashboard` ใน browser (ไม่มี session ต้องไป `/login`) และ reload หลัง worker active การทดสอบ iPhone standalone จริงยังต้องทำบนอุปกรณ์ ไม่ถือ browser desktop เป็นหลักฐานแทน
+
+อ้างอิงพฤติกรรม network: [MDN Request.cache](https://developer.mozilla.org/en-US/docs/Web/API/Request/cache), [FetchEvent.respondWith](https://developer.mozilla.org/en-US/docs/Web/API/FetchEvent/respondWith); Next.js connection/headers อ่านจากคู่มือใน node_modules ของเวอร์ชัน 16.2.3 ที่ติดตั้ง

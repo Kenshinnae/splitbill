@@ -1,4 +1,6 @@
 export const thaiMessages: Record<string, string> = {
+  "Try again": "ลองอีกครั้ง",
+  "Could not load app settings. Check your connection and try again.": "โหลดการตั้งค่าแอปไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง",
   "Loading…": "กำลังโหลด…",
   "Checking your session…": "กำลังตรวจสอบการเข้าสู่ระบบ…",
   "Delete bill": "ลบบิล",
