@@ -88,3 +88,9 @@ Server: Identity Toolkit timeout 15 วินาที, OpenAI fetch timeout 90 
 หากต้องตรวจซ้ำหลัง deploy ให้ GET URL ปกติโดยไม่เติม query ตรวจ release header/cache-control และตรวจ CSS/JS ทุกไฟล์ที่ HTML อ้างถึงต้องตอบ 200 จากนั้นเปิด `/dashboard` ใน browser (ไม่มี session ต้องไป `/login`) และ reload หลัง worker active การทดสอบ iPhone standalone จริงยังต้องทำบนอุปกรณ์ ไม่ถือ browser desktop เป็นหลักฐานแทน
 
 อ้างอิงพฤติกรรม network: [MDN Request.cache](https://developer.mozilla.org/en-US/docs/Web/API/Request/cache), [FetchEvent.respondWith](https://developer.mozilla.org/en-US/docs/Web/API/FetchEvent/respondWith); Next.js connection/headers อ่านจากคู่มือใน node_modules ของเวอร์ชัน 16.2.3 ที่ติดตั้ง
+
+### Hostinger proxy/compression follow-up (2026-09-06)
+
+หลัง purge CDN แล้ว `/dashboard` ส่ง release `startup-recovery-20260905` และ no-store ถูกต้อง แต่ยัง reproduce `ChunkLoadError` ใน browser และ curl: ไฟล์ `0yc.48vj6iim0.js` ที่ถูกต้องมี 500,472 ไบต์ บาง response จบกลางทางด้วย HTTP/2 INTERNAL_ERROR แม้ status เริ่มต้นเป็น 200 ดังนั้นตรวจ HTTP status อย่างเดียวไม่พอ ต้องอ่าน body จบและเทียบขนาด/hash ด้วย
+
+ตั้ง `compress: false` ใน next.config เพื่อให้ reverse proxy/CDN ของ Hostinger จัดการ compression แทน gzip streaming ของ Next.js ตามคู่มือ `node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/compress.md` เพิ่ม release header `proxy-compression-20260906` สำหรับตรวจ deployment การเปลี่ยนนี้ต้องตรวจเว็บจริงหลัง deploy; build ในเครื่องไม่สามารถยืนยันพฤติกรรม proxy ได้

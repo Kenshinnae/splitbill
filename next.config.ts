@@ -1,11 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Hostinger's reverse proxy/CDN handles compression. Avoid a second streaming
+  // compression layer between Next's static-file server and the proxy.
+  compress: false,
   async headers() {
     return [
       {
         source: "/:path*",
-        headers: [{ key: "X-SplitBill-Release", value: "startup-recovery-20260905" }],
+        headers: [{ key: "X-SplitBill-Release", value: "proxy-compression-20260906" }],
       },
       ...["/sw.js", "/firebase-config.json", "/api/public-config"].map((source) => ({
         source,
